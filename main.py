@@ -8,7 +8,7 @@ from googleapiclient.discovery import build
 
 SCOPES = ['https://www.googleapis.com/auth/gmail.modify']
 TOKEN_FILE = 'token.pickle'
-CREDENTIALS_FILE = 'credentials.json'
+CREDENTIALS_FILE = 'clientservices.json'
 
 def get_gmail_service():
     creds = None
@@ -22,32 +22,34 @@ def get_gmail_service():
             flow = InstalledAppFlow.from_client_secrets_file(
                 CREDENTIALS_FILE, SCOPES)
             creds = flow.run_local_server(port=0)
+        with open(TOKEN_FILE, 'wb') as token:
+            pickle.dump(creds, token)
     service = build('gmail', 'v1', credentials=creds)
     return service
 
 def list_messages(service, query=''):
-    response = service.users().messages().list(userId='me', q=query).execute()
+    response = service.users().messages().list(userId='joehearthstone@gmail.com', q=query).execute()  # Updated user ID
     messages = response.get('messages', [])
     return messages
 
 def mark_as_read(service, message_id):
     service.users().messages().modify(
-        userId='me',
+        userId='joehearthstone@gmail.com',  # Updated user ID
         id=message_id,
         body={'removeLabelIds': ['UNREAD']}
     ).execute()
 
 def delete_message(service, message_id):
-    service.users().messages().delete(userId='me', id=message_id).execute()
+    service.users().messages().delete(userId='joehearthstone@gmail.com', id=message_id).execute()  # Updated user ID
 
 def main():
     service = get_gmail_service()
-    query = 'is:unread -in:inbox from:joehearthstone@gmail.com'
+    query = 'is:unread -in:inbox'
     messages = list_messages(service, query)
 
-    for message in messages:
+    for message in messages[:10]:  # Process only the first 10 messages for testing
         message_id = message['id']
-        labels = service.users().messages().get(userId='me', id=message_id).execute()['labelIds']
+        labels = service.users().messages().get(userId='joehearthstone@gmail.com', id=message_id).execute()['labelIds']  # Updated user ID
         if 'STAR' not in labels:
             delete_message(service, message_id)
         else:
